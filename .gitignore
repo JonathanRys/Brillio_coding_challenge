@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node
+node_modules/
+
+# Build output & test coverage
+dist/
+dist-ssr/
+coverage/
+
+# Logs
+*.log
+logs/
+
+# Editor directories and files
+.vscode/
+.idea/
+*.sw?
+*.local
