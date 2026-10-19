@@ -5,6 +5,7 @@ A full-stack property listing search UI with real filtering, relevance ranking, 
 - **Backend:** FastAPI + MongoDB (Motor async driver) — `server/`
 - **Frontend:** React 19 + TypeScript + Vite + TanStack Query — `app/`
 - **Data:** `data/sample_listings.json` — 12 handcrafted Northern Virginia listings
+- **Database:** Used MongoDB to account for schema variations. I would use PostgreSQL with an ETL layer to normalize schema differences and ElasticSearch for better search capability in a real-world scenario.
 
 ## Quick start
 
@@ -46,16 +47,16 @@ configuration is needed during development.
 
 ### `GET /properties/search`
 
-| Param          | Type   | Bounds / rules                                    | Effect |
-| -------------- | ------ | ------------------------------------------------- | ------ |
-| `minPrice`     | float  | ≥ 0; must be ≤ `maxPrice`                         | Hard filter |
-| `maxPrice`     | float  | ≥ 0                                               | Hard filter |
-| `minBedrooms`  | int    | 0–20                                              | Hard filter |
-| `city`         | string | ≤ 100 chars; trimmed; exact but case-insensitive  | Hard filter |
-| `keyword`      | string | ≤ 100 chars; trimmed                              | Hard filter on `description` |
-| `targetBudget` | float  | > 0                                               | Ranking input |
-| `page`         | int    | ≥ 1 (default 1)                                   | Pagination |
-| `pageSize`     | int    | 1–50 (default 10)                                 | Pagination |
+| Param          | Type   | Bounds / rules                                   | Effect                       |
+| -------------- | ------ | ------------------------------------------------ | ---------------------------- |
+| `minPrice`     | float  | ≥ 0; must be ≤ `maxPrice`                        | Hard filter                  |
+| `maxPrice`     | float  | ≥ 0                                              | Hard filter                  |
+| `minBedrooms`  | int    | 0–20                                             | Hard filter                  |
+| `city`         | string | ≤ 100 chars; trimmed; exact but case-insensitive | Hard filter                  |
+| `keyword`      | string | ≤ 100 chars; trimmed                             | Hard filter on `description` |
+| `targetBudget` | float  | > 0                                              | Ranking input                |
+| `page`         | int    | ≥ 1 (default 1)                                  | Pagination                   |
+| `pageSize`     | int    | 1–50 (default 10)                                | Pagination                   |
 
 Response shape:
 
@@ -63,15 +64,27 @@ Response shape:
 {
   "items": [
     {
-      "property_id": "G36", "address": "2168 Rolling Mill Ave", "city": "Manassas",
-      "price": 469000.0, "bedrooms": 3, "score": 95.9,
+      "property_id": "G36",
+      "address": "2168 Rolling Mill Ave",
+      "city": "Manassas",
+      "price": 469000.0,
+      "bedrooms": 3,
+      "score": 95.9,
       "scoreBreakdown": { "budgetFit": 0.969, "recency": 0.936, "ageDays": 3 }
     }
   ],
-  "page": 1, "pageSize": 10, "total": 12, "totalPages": 2,
-  "hasNext": true, "hasPrev": false,
-  "ranking": { "mode": "budget+recency", "budgetWeight": 0.7,
-               "recencyWeight": 0.3, "halfLifeDays": 30 }
+  "page": 1,
+  "pageSize": 10,
+  "total": 12,
+  "totalPages": 2,
+  "hasNext": true,
+  "hasPrev": false,
+  "ranking": {
+    "mode": "budget+recency",
+    "budgetWeight": 0.7,
+    "recencyWeight": 0.3,
+    "halfLifeDays": 30
+  }
 }
 ```
 
@@ -81,9 +94,6 @@ results were scored.
 ### `GET /properties/cities`
 
 Sorted distinct city names, used to populate the city dropdown.
-
-Pre-existing endpoints (`POST /ingest`, `GET /properties/`,
-`POST /properties/`, `GET /property/{id}`) are unchanged.
 
 ## Testing
 
@@ -146,12 +156,12 @@ score is `100 × recency` and the response flags `mode: "recency-only"`.
 
 ### budgetFit (0–1)
 
-A piecewise-linear decay on the *relative* deviation of the price from the
+A piecewise-linear decay on the _relative_ deviation of the price from the
 target (`|price − target| / target`):
 
 - **At or under budget:** `fit = 1 − 0.5 × deviation` — being under budget is
   good, but a listing far below the target is a weaker match for what the
-  searcher asked for (they want the *best* home their budget allows, not the
+  searcher asked for (they want the _best_ home their budget allows, not the
   cheapest).
 - **Over budget:** `fit = 1 − 1.5 × deviation` — overshooting is penalised
   three times as hard as coming in under, which matches how buyers actually
@@ -224,7 +234,7 @@ mistakes are caught inline before a request is made:
   most typos; keyword is a substring match, not tokenized/weighted search.
 - `listedDate` values are naive ISO dates; recency uses server UTC "now".
   The sample data spans mid-2026, so absolute recency shifts with the real
-  clock — the ranking *relative order* is stable.
+  clock — the ranking _relative order_ is stable.
 - Scoring loads all filtered candidates into memory (fine at 12 docs; see
   "Where scoring runs" for the scale-out path).
 - The sample dataset is synthetic; duplicates across "sources" are
